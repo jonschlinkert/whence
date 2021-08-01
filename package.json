@@ -20,8 +20,8 @@
     "cover": "nyc --reporter=text --reporter=html mocha"
   },
   "devDependencies": {
-    "mocha": "^6.1.4",
-    "nyc": "^14.1.1"
+    "gulp-format-md": "^2.0.0",
+    "mocha": "^6.1.4"
   },
   "keywords": [
     "whence"
@@ -38,5 +38,11 @@
     "lint": {
       "reflinks": true
     }
+  },
+  "dependencies": {
+    "@babel/generator": "^7.13.16",
+    "@babel/parser": "^7.13.16",
+    "get-value": "^3.0.1",
+    "kind-of": "^6.0.3"
   }
 }

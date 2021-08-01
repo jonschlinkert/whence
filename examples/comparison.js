@@ -138,7 +138,7 @@ const fixtures = [
   'allEqual(isEqual(a, b), isEqual(b, b))',
   'allEqual(isEqual(a, b), isEqual(b, c))',
   'prompt.submitted && item === focused && !item.isEmpty()',
-  'isEqual("foo", c)',
+  'isEqual("foo", c)'
 ];
 
 const resolve = value => {
@@ -161,7 +161,11 @@ const context = {
   focused,
   item,
   string: true,
-  process,
+  undef: undefined,
+  qux: 'QUX',
+  // process,
+  // env: process.env
+  platform: process.platform,
   prompt: { submitted: true },
   isEqual(a, b) {
     return resolve(a) === resolve(b);
@@ -174,9 +178,7 @@ const context = {
     // });
     // return arr.every(e => e === arr[0]);
     return args.every(e => resolve(e) === resolve(args[0]));
-  },
-  platform: process.platform,
-  env: process.env,
+  }
 };
 
 /**
@@ -203,10 +205,10 @@ const elapsed = time();
 const failed = [];
 let count = 0;
 
-const test = (input, locals) => {
-  const a = whence(input, { boolean: true })({ ...context, ...locals });
-  const b = evaluate(input, context, { boolean: true });
-  const c = compile(input, { boolean: true })(context);
+const test = async (input, locals) => {
+  const a = await whence.compile(input, { boolean: true })({ ...context, ...locals });
+  const b = await evaluate(input, context, { boolean: true });
+  const c = await compile(input, { boolean: true })(context);
   const result = [a, b, c];
   count += 3;
 
@@ -216,20 +218,23 @@ const test = (input, locals) => {
   }
 };
 
-for (let fixture of fixtures) {
-  test(fixture, { a: 8, b: 8 });
-  test(fixture, { a: 9, b: 9 });
-  // test(fixture, { a: 10, b: 9 });
-  // console.log(elapsed());
-}
+(async () => {
+  for (const fixture of fixtures) {
+    await test(fixture, { a: 8, b: 8 });
+    await test(fixture, { a: 9, b: 9 });
+    // test(fixture, { a: 10, b: 9 });
+    // console.log(elapsed());
+  }
 
-// console.log(whence('string')(context))
-// console.log(whence('focused.type')(context))
-// console.log(whence('focused.type === "editable"')(context))
-// console.log(whence('string || focused.type === "editable" && bool')(context))
+  // console.log(whence('string')(context))
+  // console.log(whence('focused.type')(context))
+  // console.log(whence('focused.type === "editable"')(context))
+  // console.log(whence('string || focused.type === "editable" && bool')(context))
 
-console.log('Passed:', (count / 3) - failed.length);
-console.log('Failed:', failed.length);
-console.log('Total', elapsed());
+  console.log('Passed:', (count / 3) - failed.length);
+  console.log('Failed:', failed.length);
+  console.log('Total', elapsed());
 
-console.log(whence('"before" + JSON.stringify(include("package.json")) + "after"')())
+  // console.log(whence.compile('"before" + JSON.stringify(include("package.json")) + "after"')());
+})();
+

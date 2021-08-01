@@ -2,7 +2,7 @@
 
 require('mocha');
 const assert = require('assert').strict;
-const { evaluate } = require('../tmp/index');
+const evaluate = require('..');
 
 describe('evaluate', () => {
   it('should compare numbers', () => {

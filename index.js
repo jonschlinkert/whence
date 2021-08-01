@@ -1,147 +1,133 @@
+/* eslint-disable no-case-declarations */
 'use strict';
 
-const kFn = Symbol('when');
-const compile = require('./compile');
+const typeOf = require('kind-of');
 
-const isObject = val => val !== null && typeof val === 'object' && !Array.isArray(val);
+const isObject = value => typeOf(value) === 'object';
+const isPrimitive = value => {
+  return value == null || (typeof value !== 'object' && typeof value !== 'function');
+};
 
-const isEqual = (a, b) => {
-  if (!a && !b) return true;
-  if (!a && b || a && !b) return false;
-  if (!isObject(a) || !isObject(b)) return false;
-  for (const k of Object.keys(a)) {
-    if (isObject(a[k]) && isObject(b[k])) {
-      if (!isEqual(a[k], b[k])) {
-        return false;
+const wrap = (input, context = {}) => {
+  if (/[$#{]/.test(input) && !input.startsWith('`') && !input.endsWith('`')) {
+    return `\`${input}\``;
+  }
+
+  return input;
+};
+
+// eslint-disable-next-line no-unused-vars
+const isEqual = (valueA, valueB) => {
+  const equal = (a, b) => {
+    if (a === b) return true;
+
+    if (isPrimitive(a)) {
+      if (isObject(b) && b === valueB) {
+        let expected = b[a];
+
+        if (typeof a === 'string' && a.startsWith('!')) {
+          a = a.slice(1);
+          expected = b[a];
+
+          if (typeof expected === 'boolean') {
+            expected = !expected;
+          }
+        }
+
+        return expected === true;
       }
-    } else if (a[k] !== b[k]) {
+
       return false;
     }
-  }
-  return true;
-};
 
-const whence = (input, context, options = {}) => {
-  return whence.compile(input, options)(context);
-};
-
-whence.precompile = (clause, options = {}) => {
-  if (Array.isArray(clause)) {
-    return clause.map(ele => whence.precompile(ele, options));
-  }
-
-  clause[kFn] = whence(clause.when, options);
-  return clause;
-};
-
-whence.evaluate = (input, context, options) => whence(input, context, options);
-
-whence.is = (input, context, options) => {
-  return whence.evaluate(input, context, { ...options, boolean: true });
-};
-
-whence.find = (clauses = [], context, options = {}) => {
-  for (const ele of [].concat(clauses)) {
-    const clause = ele[kFn] || (ele[kFn] = whence(ele.when, options));
-    const value = clause(context);
-    if (value) {
-      return (options.prop && isObject(value)) ? value[options.prop] : value;
+    if (isObject(a)) {
+      if (!isObject(b)) return false;
+      for (const [key, value] of Object.entries(a)) {
+        if (!equal(value, b[key])) {
+          return false;
+        }
+      }
+      return true;
     }
-  }
+
+    if (Array.isArray(a)) {
+      if (Array.isArray(b)) {
+        return a.every((value, i) => equal(value, b[i]));
+      }
+
+      return a.every(value => equal(value, b));
+    }
+
+    if (typeOf(a) !== typeOf(b)) {
+      return false;
+    }
+
+    // other checks could be done here
+    return true;
+  };
+
+  return equal(valueA, valueB);
 };
 
-whence.resolve = (clauses = [], options) => {
-  return (context, props = []) => {
-    const prop = options && options.prop;
-    const keys = new Set([].concat(props));
-    const seen = new Set();
-    const values = {};
+const compile = (input, options = {}) => {
+  if (input === 'undefined') return () => undefined;
+  if (input === 'null') return () => null;
 
-    for (const ele of [].concat(clauses)) {
-      if ((keys.size > 0 && !keys.has(ele.key)) || seen.has(ele.key)) continue;
+  const output = typeof input === 'string' ? wrap(input) : input;
 
-      const clause = ele[kFn] || (ele[kFn] = whence(ele.when, options));
-      const value = clause(context);
+  if (typeof output !== 'string' || /^[a-z_]+$/.test(output)) {
+    return context => isEqual(output, context);
+  }
 
-      if (value !== void 0) {
-        seen.add(ele.key);
-        values[ele.key] = (prop && isObject(value)) ? value[prop] : value;
+  return (context = {}) => {
+    const { helpers } = options;
+
+    if (helpers) {
+      for (const key of Object.keys(helpers)) {
+        const helper = [context[key], helpers[key]].find(v => typeof v === 'function');
+        context[key] = (...args) => helper.call(context, ...args);
       }
     }
-    return values;
+
+    const assign = (context, locals) => {
+      if (typeof context[Symbol.iterator] === 'function') {
+        context = Object.assign(...context);
+      }
+      return { ...context, ...locals };
+    };
+
+    context.compile = (str, opts) => compile(str, { ...options, ...opts });
+    context.render = (str, locals, opts) => {
+      return context.compile(str, opts)(assign(context, locals));
+    };
+
+    try {
+      if (typeof context[Symbol.iterator] === 'function') {
+        context = Object.assign(...context);
+      }
+
+      const keys = Object.keys(context);
+      const values = Object.values(context);
+      // eslint-disable-next-line no-new-func
+      const render = Function(keys, `'use strict';return ${output}`);
+      const result = render.call(context, ...values);
+      return options.boolean ? Boolean(result) : result;
+    } catch (err) {
+      if (options.strictErrors !== false || !err.message.includes('is not defined')) {
+        err.input = input;
+        err.wrapped = output;
+        err.context = context;
+        throw err;
+      }
+      return options.boolean ? false : void 0;
+    }
   };
 };
 
-whence.hydrate = (clauses = [], options) => {
-  return (context, props = []) => {
-    const prop = options && options.prop;
-    const keys = new Set([].concat(props));
-    const seen = new Set();
-    const values = {};
-
-    for (const ele of [].concat(clauses)) {
-      if ((keys.size > 0 && !keys.has(ele.key)) || seen.has(ele.key)) continue;
-
-      const clause = ele[kFn] || (ele[kFn] = whence(ele.when, options));
-      const value = clause(context);
-
-      if (value !== void 0) {
-        seen.add(ele.key);
-        values[ele.key] = (prop && isObject(value)) ? value[prop] : value;
-      }
-    }
-    return values;
-  };
+const whence = (input, context, options) => {
+  return compile(input, options)(context);
 };
 
-whence.match = (clauses = [], options) => {
-  whence.precompile(clauses, options);
-  return context => whence.find(clauses, context, options);
-};
-
-whence.compare = (input, options) => {
-  if (input === void 0) return () => true;
-  if (typeof input === 'boolean') return () => input;
-  if (typeof input === 'function') return input;
-  if (isObject(input)) {
-    if (input.when != null) {
-      input[kFn] = whence.compile(input.when, options);
-    }
-    if (input.skip != null) {
-      input[kFn] = context => !whence.compile(input.skip, options)(context);
-    }
-    if (typeof input[kFn] === 'function') {
-      return input[kFn];
-    }
-    return context => isEqual(input, context);
-  }
-
-  if (typeof input === 'string') {
-    return whence.compile(input, options);
-  }
-};
-
-whence.compile = (input, options = {}) => {
-  if (typeof input !== 'string') {
-    return whence.compare(input, options);
-  }
-  if (options.sync === true) {
-    return whence.compileSync(input, options);
-  }
-  return compile(input, options);
-};
-
-whence.compileSync = (input, options = {}) => {
-  // if (typeof input !== 'string') {
-  //   return whence.compare(input, options);
-  // }
-  return compile.sync(input, { sync: true, ...options });
-};
-
-whence.compileSync = compile.sync;
-whence.whence = whence;
+whence.isEqual = isEqual;
+whence.compile = compile;
 module.exports = whence;
-
-
-// const resolve = whence(clauses, options);
-// console.log(resolve(context, ['name', 'username']));

@@ -9,9 +9,11 @@ const clauses = [
   { when: 'foo === "fez"', result: 4 }
 ];
 
-const match = whence.match(clauses, { prop: 'result' });
+(async () => {
+  const match = whence.match(clauses, { prop: 'result' });
 
-console.log(match({ foo: 'bar' }));
-console.log(match({ foo: 'baz' }));
-console.log(match({ foo: 'qux' }));
-console.log(match({ foo: 'fez' }));
+  console.log(await match({ foo: 'bar' }));
+  console.log(await match({ foo: 'baz' }));
+  console.log(await match({ foo: 'qux' }));
+  console.log(await match({ foo: 'fez' }));
+})();
