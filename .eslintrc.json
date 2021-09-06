@@ -3,12 +3,17 @@
     "eslint:recommended"
   ],
 
+  "plugins": ["@babel"],
+
   "env": {
     "es2021": true,
     "node": true
   },
 
+  "parser": "@babel/eslint-parser",
   "parserOptions": {
+    "sourceType": "script",
+    "requireConfigFile": false,
     "ecmaVersion": 12
   },
 
