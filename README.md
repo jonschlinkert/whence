@@ -1,6 +1,6 @@
 # whence [![NPM version](https://img.shields.io/npm/v/whence.svg?style=flat)](https://www.npmjs.com/package/whence) [![NPM monthly downloads](https://img.shields.io/npm/dm/whence.svg?style=flat)](https://npmjs.org/package/whence) [![NPM total downloads](https://img.shields.io/npm/dt/whence.svg?style=flat)](https://npmjs.org/package/whence)  [![Tests](https://github.com/jonschlinkert/whence/actions/workflows/test.yml/badge.svg)](https://github.com/jonschlinkert/whence/actions/workflows/test.yml)
 
-> Whence safely evaluates user-defined conditional expressions, allowing you to add context awareness to your apps and frameworks. Useful for evaluating expressions in config files, prompts, key bindings, completions, templates, and many other user cases.
+> Add context awareness to your apps and frameworks by safely evaluating user-defined conditional expressions. Useful for evaluating expressions in config files, prompts, key bindings, completions, templates, and many other user cases.
 
 Please consider following this project's author, [Jon Schlinkert](https://github.com/jonschlinkert), and consider starring the project to show your :heart: and support.
 
@@ -16,11 +16,15 @@ $ npm install --save whence
 
 This libarary doest returneth true if thine 'when' clause doest matcheth the granted context object.
 
-### Seriously though, what does this library do?
+<details>
+<summary><strong>Seriously though, what does this library do?</strong></summary>
 
 Whence uses [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) to _safely evaluate_ user-defined conditional expressions, sometimes referred to as "when" clauses.
 
-### Why do I need this?
+</details>
+
+<details>
+<summary><strong>Why do I need this?</strong></summary>
 
 Add _context awareness_ to your apps and frameworks.
 
@@ -38,11 +42,17 @@ For example, when authoring configuration files for workflows, pipelines, builds
 * Completions and suggestions - Use whence to filter completions and suggestions in your text editor or prompt system
 * Key bindings - [VS Code](https://code.visualstudio.com/api/references/when-clause-contexts) and other text editors use `when` clauses or something similar to determine the keybindings to use when a key is pressed.
 
-### How safe is it?
+</details>
+
+<details>
+<summary><strong>How safe is it?</strong></summary>
 
 No assignment operators, functions, or function calls are allowed by default to make it as safe as possible to evaluate user-defined expressions. To accomplish this, `whence` uses the [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) library, which takes an [estree](https://github.com/estree/estree) expression from [@babel/parser][], [esprima](http://esprima.org), [acorn](https://github.com/acornjs/acorn), or any similar library that parses and returns a valid `estree` expression.
 
-### Why another "eval" library?
+</details>
+
+<details>
+<summary><strong>Why another "eval" library?</strong></summary>
 
 **What we found**
 
@@ -58,6 +68,8 @@ Every other eval library I found had one of the following shortcomings:
 * Whence takes a valid [estree][] _expression_ AST
 * Functions are not supported by default, although you can enable function support (See the [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) docs for more details)
 * Special care was taken in [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) to disallow assignment operators, functions, or other potentially malicious code, like setting `__proto__`, `constructor`, `prototype`, or `undefined` as a property name on nested properties.
+
+</details>
 
 ## Usage
 
