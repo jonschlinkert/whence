@@ -1,7 +1,7 @@
 {
   "name": "whence",
   "description": "Add context awareness to your apps and frameworks by safely evaluating user-defined conditional expressions. Useful for evaluating expressions in config files, prompts, key bindings, completions, templates, and many other user cases.",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "homepage": "https://github.com/jonschlinkert/whence",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
   "repository": "jonschlinkert/whence",
