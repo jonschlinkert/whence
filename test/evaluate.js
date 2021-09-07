@@ -1,7 +1,9 @@
-import esprima from 'esprima';
-import babel from '@babel/parser';
-import { strict as assert } from 'assert';
-import e from '../index.mjs';
+'use strict';
+
+const esprima = require('esprima');
+const babel = require('@babel/parser');
+const { strict: assert } = require('assert');
+const e = require('..');
 
 describe('evaluate', () => {
   describe('ast', () => {
@@ -245,20 +247,6 @@ describe('evaluate', () => {
   });
 
   describe('sync', () => {
-    describe('comparisons', () => {
-      it('booleans', () => {
-        assert(e.sync(true, {}, { truthy: true }));
-        assert(!e.sync(false, {}, { truthy: true }));
-      });
-
-      it('objects', () => {
-        assert(e.sync({ foo: 'bar' }, { foo: 'bar' }, { truthy: true }));
-        assert(!e.sync({ foo: 'bar' }, { foo: 'baz' }, { truthy: true }));
-        assert(e.sync({ foo: 'bar', baz: 'qux' }, { foo: 'bar', baz: 'qux' }, { truthy: true }));
-        assert(!e.sync({ foo: 'bar', baz: 'qux' }, { foo: 'bar' }, { truthy: true }));
-      });
-    });
-
     describe('ast', () => {
       it('should accept an ast from babel', () => {
         assert(e.sync(babel.parseExpression('9 === 9')));

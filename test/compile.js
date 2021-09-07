@@ -1,5 +1,7 @@
-import { strict as assert } from 'assert';
-import { compile } from '../index.mjs';
+'use strict';
+
+const { strict: assert } = require('assert');
+const { compile } = require('..');
 
 describe('compile', () => {
   describe('async', () => {

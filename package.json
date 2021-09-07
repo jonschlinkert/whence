@@ -1,6 +1,6 @@
 {
   "name": "whence",
-  "description": "Returns true if a 'when' clause matches the given context object.",
+  "description": "Add context awareness to your apps and frameworks by safely evaluating user-defined conditional expressions. Useful for evaluating expressions in config files, prompts, key bindings, completions, templates, and many other user cases.",
   "version": "0.0.0",
   "homepage": "https://github.com/jonschlinkert/whence",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
@@ -9,27 +9,28 @@
     "url": "https://github.com/jonschlinkert/whence/issues"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=14"
   },
+  "main": "index.js",
   "files": [
-    "index.mjs"
+    "index.js"
   ],
   "license": "MIT",
   "scripts": {
-    "test": "mocha",
-    "cover": "nyc --reporter=text --reporter=html mocha"
+    "test": "mocha --recursive --ignore 'test/support/**'",
+    "test:ci": "nyc --reporter=lcov npm run test",
+    "cover": "nyc --reporter=text --reporter=html npm run test"
   },
   "dependencies": {
-    "@babel/parser": "^7.14.9",
+    "@babel/parser": "^7.15.5",
     "eval-estree-expression": "^1.0.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.15.4",
     "@babel/eslint-plugin": "^7.14.5",
-    "@babel/parser": "^7.15.5",
     "esprima": "^4.0.1",
     "gulp-format-md": "^2.0.0",
-    "mocha": "^6.1.4"
+    "mocha": "^9.1.1"
   },
   "keywords": [
     "@babel",
@@ -42,11 +43,12 @@
     "clause",
     "compiler",
     "context",
+    "context awareness",
     "ecma",
     "ecmascript",
     "es6",
-    "estree",
     "esprima",
+    "estree",
     "eval",
     "evaluate",
     "expr-eval",
@@ -55,7 +57,9 @@
     "invoke",
     "javascript",
     "js",
+    "match",
     "math",
+    "object",
     "operator",
     "parse",
     "parser",
@@ -82,6 +86,13 @@
     ],
     "lint": {
       "reflinks": true
-    }
+    },
+    "related": {
+      "list": []
+    },
+    "reflinks": [
+      "estree",
+      "eval-estree-expression"
+    ]
   }
 }
