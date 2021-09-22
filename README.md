@@ -34,7 +34,7 @@ It's even more useful when those conditional expressions can be evaluated safely
 
 **Example: configuration files**
 
-For example, when authoring configuration files for workflows, pipelines, builds, and so on, it's common for developers to define expressions with conditionals to determine if or when a job, task, or step should run based on environment variables, etc. These configurations are typically defined using YAML, JSON or a similar data format, which means that conditional expressions must be written as strings, booleans, or numbers. Whence makes it safe and easy to evalue these expressions.
+For example, when authoring configuration files for workflows, pipelines, builds, and so on, it's common for developers to define expressions with conditionals to determine if or when a job, task, or step should run based on environment variables, etc. These configurations are typically defined using YAML, JSON or a similar data format, which means that conditional expressions must be written as strings, booleans, or numbers. Whence makes it safe and easy to evaluate these expressions.
 
 **Other use cases**
 
@@ -65,9 +65,9 @@ Every other eval library I found had one of the following shortcomings:
 
 **What whence does differently**
 
-* Whence takes a valid [estree][] _expression_ AST
-* Functions are not supported by default, although you can enable function support (See the [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) docs for more details)
-* Special care was taken in [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) to disallow assignment operators, functions, or other potentially malicious code, like setting `__proto__`, `constructor`, `prototype`, or `undefined` as a property name on nested properties.
+* Whence takes a valid [estree][] AST for an _expression_, not statements, functions, etc.
+* Although functions are not supported by default, you can enable support if you really need it (see the [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) docs for more details)
+* Special care was taken in [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) to disallow assignment operators, functions, or other potentially malicious code, like setting `__proto__`, `constructor`, `prototype`, or `undefined` as property names on nested properties.
 
 </details>
 
@@ -77,33 +77,51 @@ Every other eval library I found had one of the following shortcomings:
 const whence = require('whence');
 
 // async usage
-console.log(await whence('amount > 100', { amount: 101 }));
-console.log(await whence('a < b && c > d', { a: 0, b: 1, c: 3, d: 2 }));
-console.log(await whence('platform === "darwin"', { platform: process.platform }));
+console.log(await whence('name =~ /^d.*b$/', { name: 'doowb' })); //=> true
+console.log(await whence('amount > 100', { amount: 101 })); //=> true
+console.log(await whence('a < b && c > d', { a: 0, b: 1, c: 3, d: 2 })); //=> true
+console.log(await whence('platform === "darwin"', { platform: process.platform })); //=> true if macOS
+console.log(await whence('platform === "darwin"', { platform: 'win32' })); //=> false
 
 // sync usage
-console.log(whence.sync('amount > 100', { amount: 101 }));
-console.log(whence.sync('a < b && c > d', { a: 0, b: 1, c: 3, d: 2 }));
-console.log(whence.sync('platform === "darwin"', { platform: process.platform }));
+console.log(whence.sync('name =~ /^d.*b$/', { name: 'doowb' })); //=> true
+console.log(whence.sync('amount > 100', { amount: 101 })); //=> true
+console.log(whence.sync('a < b && c > d', { a: 0, b: 1, c: 3, d: 2 })); //=> true
+console.log(whence.sync('platform === "darwin"', { platform: process.platform })); //=> true if macOS
+console.log(whence.sync('platform === "darwin"', { platform: 'win32' })); //=> false
 ```
 
-See [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) and the `eval-estree-expression` unit tests for many more examples of the types of expressions that are supported.
+See [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) and that project's unit tests for many more examples of the types of expressions that are supported.
+
+## How whence works
+
+Whence's default behavior (and purpose) is to return a boolean. Most implementors will be interested in this library for that reason. However, if you need the evaluated result and do not want values to be cast to booleans, you should probably use [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) directly. For example:
+
+```js
+// whence behavior
+console.log(whence.sync('1 + 9')); //=> true
+
+// eval-estree-expression behavior
+console.log(whence.sync('1 + 9')); //=> 10
+```
 
 ## API
 
-### [equal](index.js#L25)
+### [equal](index.js#L38)
 
-Returns true if the given value is truthy, or the `left` value is contained within
-the `right` value.
+Returns true if the given value is truthy, or the `value` ("left") is
+equal to or contained within the `context` ("right") value. This method is
+used by the `whence()` function (the main export), but you can use this
+method directly if you don't want the values to be evaluated.
 
 **Params**
 
-* `left` **{any}**: The value to test.
-* `right` **{Object}**: The value to compare against.
+* `value` **{any}**: The value to test.
+* `context` **{Object}**: The value to compare against.
 * `parent` **{[type](https://github.com/medikoo/type)}**
 * `returns` **{Boolean}**: Returns true or false.
 
-### [parse](index.js#L85)
+### [parse](index.js#L138)
 
 Parses the given expression string with [@babel/parser][] and returns and AST. You may also an [estree][]-compatible expression AST.
 
@@ -122,9 +140,9 @@ console.log(parse('platform === "darwin"'));
 // Resuls in something like this:
 // Node {
 //   type: 'BinaryExpression',
-//   left: Node { type: 'Identifier', name: 'platform' },
+//   value: Node { type: 'Identifier', name: 'platform' },
 //   operator: '===',
-//   right: Node {
+//   context: Node {
 //     type: 'StringLiteral',
 //     extra: { rawValue: 'darwin', raw: '"darwin"' },
 //     value: 'darwin'
@@ -132,7 +150,7 @@ console.log(parse('platform === "darwin"'));
 // }
 ```
 
-### [whence](index.js#L118)
+### [whence](index.js#L171)
 
 Asynchronously evaluates the given expression and returns a boolean.
 
@@ -152,7 +170,7 @@ console.log(await whence('10 < 20')); //=> true
 console.log(whence.sync('10 < 20')); //=> true
 ```
 
-### [whenceSync](index.js#L136)
+### [whenceSync](index.js#L204)
 
 Synchronous version of [whence](#whence). Aliased as `whence.sync()`.
 
@@ -171,7 +189,7 @@ const { whenceSync } = require('whence');
 console.log(whenceSync('10 < 20')); //=> true
 ```
 
-### [compile](index.js#L155)
+### [compile](index.js#L238)
 
 Compiles the given expression and returns an async function.
 
@@ -191,7 +209,7 @@ console.log(await fn({ type: 'foo' })); //=> true
 console.log(await fn({ type: 'bar' })); //=> false
 ```
 
-### [compileSync](index.js#L180)
+### [compileSync](index.js#L264)
 
 Synchronous version of [compile](#compile). This method is also alias as `.compile.sync()`.
 
@@ -213,7 +231,22 @@ console.log(fn({ type: 'bar' })); //=> false
 
 ## Options
 
-Supports all options from [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression) along with the following `whence` options.
+Supports all options from [eval-estree-expression](https://github.com/jonschlinkert/eval-estree-expression).
+
+### functions
+
+Although whence doesn't like functions...
+
+```js
+console.log(whence.sync('/[a-c]+/.test(foo)', { foo: 'bbb' })); //=> throws an error
+```
+
+You can talk whence into evaluating them by setting the `functions` option to true.
+
+```js
+console.log(whence.sync('/[a-c]+/.test(foo)', { foo: 'bbb' }, { functions: true })); //=> true
+console.log(whence.sync('/[a-c]+/.test(foo)', { foo: 'zzz' }, { functions: true })); //=> false
+```
 
 ## Examples
 
@@ -265,4 +298,4 @@ Released under the [MIT License](LICENSE).
 
 ***
 
-_This file was generated by [verb-generate-readme](https://github.com/verbose/verb-generate-readme), v0.8.0, on September 07, 2021._
+_This file was generated by [verb-generate-readme](https://github.com/verbose/verb-generate-readme), v0.8.0, on September 22, 2021._

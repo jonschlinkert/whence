@@ -22,8 +22,8 @@
     "cover": "nyc --reporter=text --reporter=html npm run test"
   },
   "dependencies": {
-    "@babel/parser": "^7.15.5",
-    "eval-estree-expression": "^1.0.0"
+    "@babel/parser": "^7.15.7",
+    "eval-estree-expression": "^1.0.1"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.15.4",
