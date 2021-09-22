@@ -4,55 +4,108 @@ const babel = require('@babel/parser');
 const expression = require('eval-estree-expression');
 const { evaluate } = expression;
 
-const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+const isAST = value => isObject(value) && hasOwnProperty.call(value, 'type');
+
+const isObject = value => {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+};
 
 const isPrimitive = value => {
   return value == null || (typeof value !== 'object' && typeof value !== 'function');
 };
 
+const LITERALS = {
+  'undefined': undefined,
+  'null': null,
+  'true': true,
+  'false': false
+};
+
 /**
- * Returns true if the given value is truthy, or the `left` value is contained within
- * the `right` value.
+ * Returns true if the given value is truthy, or the `value` ("left") is
+ * equal to or contained within the `context` ("right") value. This method is
+ * used by the `whence()` function (the main export), but you can use this
+ * method directly if you don't want the values to be evaluated.
  *
  * @name equal
- * @param {any} `left` The value to test.
- * @param {Object} `right` The value to compare against.
+ * @param {any} `value` The value to test.
+ * @param {Object} `context` The value to compare against.
  * @param {[type]} `parent`
  * @return {Boolean} Returns true or false.
  * @api public
  */
 
-const equal = (left, right, parent) => {
-  if (left === right) return true;
+const equal = (value, context, options = {}) => {
+  const eq = (a, b, parent, depth = 0) => {
+    if (a === b) return true;
 
-  if (typeof left === 'boolean' && !parent) {
-    if (isPrimitive(right)) return left === right;
-    return left;
-  }
-
-  if (isPrimitive(left) && isObject(right)) {
-    return Boolean(right[left]);
-  }
-
-  if (isPrimitive(left) && Array.isArray(right)) {
-    return right.includes(left);
-  }
-
-  if (Array.isArray(left)) {
-    if (isObject(right)) {
-      return left.every(ele => equal(ele, right, left));
+    if (a === 'undefined' || a === 'null') {
+      return a === b;
     }
 
-    if (Array.isArray(right)) {
-      return left.every((ele, i) => equal(ele, right[i], left));
+    if (typeof a === 'boolean' && (!parent || parent === context)) {
+      return typeof b === 'boolean' ? a === b : a;
     }
-  }
 
-  if (isObject(left)) {
-    return isObject(right) && Object.entries(left).every(([k, v]) => equal(v, right[k], left));
-  }
+    if ((a === 'true' || a === 'false') && (!parent || parent === context)) {
+      return a === 'true';
+    }
 
-  return false;
+    // only call function values at the root
+    if (typeof a === 'function' && depth === 0) {
+      return a.call(b, b, options);
+    }
+
+    if (typeof a === 'string' && (isObject(b) && b === context || (depth === 0 && context === undefined))) {
+      if (options.castBoolean === false || (b && hasOwnProperty.call(b, a))) {
+        return Boolean(b[a]);
+      }
+
+      return whence.sync(a, b, options);
+    }
+
+    if (isPrimitive(a) && isObject(b)) {
+      return Boolean(b[a]);
+    }
+
+    if (isPrimitive(a) && Array.isArray(b)) {
+      return b.includes(a);
+    }
+
+    if (a instanceof RegExp) {
+      return !(b instanceof RegExp) ? false : a.toString() === b.toString();
+    }
+
+    if (a instanceof Date) {
+      return !(b instanceof Date) ? false : a.toString() === b.toString();
+    }
+
+    if (a instanceof Set) {
+      return b instanceof Set && eq([...a], [...b], a, depth + 1);
+    }
+
+    if (a instanceof Map) {
+      return b instanceof Map && [...a].every(([k, v]) => eq(v, b.get(k), a, depth + 1));
+    }
+
+    if (Array.isArray(a)) {
+      if (isObject(b)) {
+        return a.every(ele => eq(ele, b, a, depth + 1));
+      }
+
+      if (Array.isArray(b)) {
+        return a.every((ele, i) => eq(ele, b[i], a, depth + 1));
+      }
+    }
+
+    if (isObject(a)) {
+      return isObject(b) && Object.entries(a).every(([k, v]) => eq(v, b[k], a, depth + 1));
+    }
+
+    return false;
+  };
+
+  return eq(value, context);
 };
 
 /**
@@ -66,9 +119,9 @@ const equal = (left, right, parent) => {
  * // Resuls in something like this:
  * // Node {
  * //   type: 'BinaryExpression',
- * //   left: Node { type: 'Identifier', name: 'platform' },
+ * //   value: Node { type: 'Identifier', name: 'platform' },
  * //   operator: '===',
- * //   right: Node {
+ * //   context: Node {
  * //     type: 'StringLiteral',
  * //     extra: { rawValue: 'darwin', raw: '"darwin"' },
  * //     value: 'darwin'
@@ -115,7 +168,22 @@ const parse = (source, options = {}) => {
  * @api public
  */
 
-const whence = (source, context = {}, options = {}) => compile(source, options)(context);
+const whence = async (source, context, options = {}) => {
+  if (isAST(source)) {
+    return compile(source, options)(context);
+  }
+
+  if (typeof source !== 'string' || (isPrimitive(context) && context !== undefined)) {
+    return equal(source, context, options);
+  }
+
+  if (hasOwnProperty.call(LITERALS, source)) {
+    return options.castBoolean !== false ? Boolean(LITERALS[source]) : LITERALS[source];
+  }
+
+  const result = compile(source, options)(context);
+  return options.castBoolean !== false ? Boolean(await result) : result;
+};
 
 /**
  * Synchronous version of [whence](#whence). Aliased as `whence.sync()`.
@@ -133,7 +201,22 @@ const whence = (source, context = {}, options = {}) => compile(source, options)(
  * @api public
  */
 
-const whenceSync = (source, context = {}, options = {}) => compileSync(source, options)(context);
+const whenceSync = (source, context, options = {}) => {
+  if (isAST(source)) {
+    return compile.sync(source, options)(context);
+  }
+
+  if (typeof source !== 'string' || (isPrimitive(context) && context !== undefined)) {
+    return equal(source, context, options);
+  }
+
+  if (hasOwnProperty.call(LITERALS, source)) {
+    return options.castBoolean !== false ? Boolean(LITERALS[source]) : LITERALS[source];
+  }
+
+  const result = compile.sync(source, options)(context);
+  return options.castBoolean !== false ? Boolean(result) : result;
+};
 
 /**
  * Compiles the given expression and returns an async function.
@@ -153,10 +236,11 @@ const whenceSync = (source, context = {}, options = {}) => compileSync(source, o
  */
 
 const compile = (source, options) => {
-  const ast = parse(source, options);
+  const opts = { strictVariables: false, booleanLogicalOperators: true, ...options };
+  const ast = parse(source, opts);
 
   return context => {
-    return evaluate(ast, context, options);
+    return evaluate(ast, context, opts);
   };
 };
 
@@ -178,10 +262,11 @@ const compile = (source, options) => {
  */
 
 const compileSync = (source, options) => {
-  const ast = parse(source, options);
+  const opts = { strictVariables: false, booleanLogicalOperators: true, ...options };
+  const ast = parse(source, opts);
 
   return context => {
-    return evaluate.sync(ast, context, options);
+    return evaluate.sync(ast, context, opts);
   };
 };
 

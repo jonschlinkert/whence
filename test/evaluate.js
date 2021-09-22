@@ -3,7 +3,15 @@
 const esprima = require('esprima');
 const babel = require('@babel/parser');
 const { strict: assert } = require('assert');
-const e = require('..');
+const whence = require('..');
+
+const e = (source, context, options) => {
+  return whence(source, context, { ...options, castBoolean: false });
+};
+
+e.sync = (source, context, options) => {
+  return whence.sync(source, context, { ...options, castBoolean: false });
+};
 
 describe('evaluate', () => {
   describe('ast', () => {
@@ -12,7 +20,7 @@ describe('evaluate', () => {
       assert(await e(babel.parseExpression('(1 !== 2 || 5 === 5) && "foo" !== true')));
     });
 
-    it('should accept an ast from esprim', async () => {
+    it('should accept an ast from esprima', async () => {
       assert(await e(esprima.parse('9 === 9')));
       assert(await e(esprima.parse('(1 !== 2 || 5 === 5) && "foo" !== true')));
     });

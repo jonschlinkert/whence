@@ -82,4 +82,73 @@ describe('equal', () => {
       assert(!equal({ a: { b: { c: { d: 'efgh' } } } }, context));
     });
   });
+
+  describe('booleans', () => {
+    it('should return true equal `true`', async () => {
+      assert.equal(await equal(true), true);
+      assert.equal(await equal(true), true);
+    });
+
+    it('should return true equal `"true"`', async () => {
+      assert.equal(await equal('true'), true);
+      assert.equal(await equal('true'), true);
+    });
+
+    it('should return true equal `false`', async () => {
+      assert.equal(await equal(false), false);
+      assert.equal(await equal(false), false);
+    });
+
+    it('should return false equal `false`', async () => {
+      assert.equal(await equal('false'), false);
+      assert.equal(await equal('false'), false);
+    });
+  });
+
+  describe('conditionals', () => {
+    it('should support conditionals', async () => {
+      assert.equal(await equal('9 > 1'), true);
+      assert.equal(await equal('9 < 1'), false);
+    });
+
+    it('should support conditionals with variables', async () => {
+      assert.equal(await equal('a > b', { a: 9, b: 1 }), true);
+      assert.equal(await equal('a < b', { a: 9, b: 1 }), false);
+    });
+  });
+
+  describe('objects', () => {
+    it('should support objects', async () => {
+      assert.equal(await equal({ a: 9 }, { a: 9, b: 1 }), true);
+      assert.equal(await equal({ a: 8 }, { a: 9, b: 1 }), false);
+    });
+  });
+
+  describe('dates', () => {
+    it('should support dates', async () => {
+      assert.equal(await equal(new Date(), new Date()), true);
+      assert.equal(await equal(new Date('2020-12-17T03:24:00'), new Date('2020-12-17T03:24:00')), true);
+      assert.equal(await equal(new Date('2020-12-17T03:24:00'), new Date('2020-11-17T03:24:00')), false);
+    });
+  });
+
+  describe('undefined', () => {
+    it('should return true equal undefined', async () => {
+      assert.equal(await equal(undefined), true);
+    });
+
+    it('should return false equal "undefined"', async () => {
+      assert.equal(await equal('undefined'), false);
+    });
+  });
+
+  describe('null', () => {
+    it('should return false equal null', async () => {
+      assert.equal(await equal(null), false);
+    });
+
+    it('should return false equal "null"', async () => {
+      assert.equal(await equal('null'), false);
+    });
+  });
 });
