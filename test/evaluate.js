@@ -1,8 +1,8 @@
 'use strict';
 
+const assert = require('node:assert/strict');
 const esprima = require('esprima');
 const babel = require('@babel/parser');
-const { strict: assert } = require('assert');
 const whence = require('..');
 
 const e = (source, context, options) => {

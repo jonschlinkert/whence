@@ -66,9 +66,12 @@ temp
 vendor
 .DS_Store
 *.sublime-*
+*.code-*
+*-lock.*
 
 docs
 brandscale
 expressions
 liquidjs
 _draft
+
